@@ -2,6 +2,7 @@ use crossterm::{
     execute,
     terminal::{Clear, ClearType},
 };
+mod ui;
 use dialoguer::FuzzySelect;
 use reqwest;
 use scraper::{self, Html, Selector};
@@ -98,7 +99,5 @@ async fn main() {
     } else {
         println!("failed");
     }
-    for p in paragraphs {
-        println!("{}", p);
-    }
+    ui::main(paragraphs);
 }
