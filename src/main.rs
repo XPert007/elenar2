@@ -46,8 +46,14 @@ async fn main() {
         .items(&items)
         .interact()
         .unwrap();
-    println!(
-        "Selected link : {}",
-        name_with_link.get(&items[selected]).unwrap()
-    );
+
+    let chapter_with_link: HashMap<String, String> = HashMap::new();
+    let link = name_with_link.get(&items[selected]).unwrap();
+    let response = reqwest::get(link).await.unwrap();
+    if response.status().is_success() {
+        let body = response.text().await.unwrap();
+        println!("{}", body);
+    } else {
+        println!("doesnt work");
+    }
 }
