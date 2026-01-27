@@ -1,6 +1,6 @@
-use reqwest;
-use std::io;
-
+use reqwest::{self, Body};
+use scraper::{self, Html, Selector};
+use std::{collections::HashMap, io};
 #[tokio::main]
 async fn main() {
     println!("Enter the light novel you'd like to read");
@@ -15,11 +15,21 @@ async fn main() {
         sub_search.push_str("+");
     }
     let link = format!("https://novelbin.me/search?keyword={sub_search}");
-    let response = reqwest::get(link).await.unwrap(); //probably errors if no
-    //internet
+    let response = reqwest::get(link).await.unwrap(); //probably errors if no internet
+    let mut name_with_link: HashMap<String, String> = HashMap::new();
     if response.status().is_success() {
         let body = response.text().await.unwrap();
-        println!("{}", body);
+        let document = Html::parse_document(&body);
+        let row_sel = Selector::parse(".list.list-novel.col-xs-12 > *").unwrap();
+        let link_sel = Selector::parse("h3.novel-title > a").unwrap();
+
+        for row in document.select(&row_sel) {
+            if let Some(a) = row.select(&link_sel).next() {
+                let title = a.text().collect::<String>().trim().to_string();
+                let href = a.value().attr("href").unwrap_or("").to_string();
+                name_with_link.insert(title, href);
+            }
+        }
     } else {
         println!("response failed");
     }
