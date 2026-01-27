@@ -64,6 +64,8 @@ async fn main() {
             let title = a.value().attr("title").unwrap_or("").to_string();
 
             let href = a.value().attr("href").unwrap_or("").to_string();
+
+            let href = href.replace("/novel-book/", "/b/");
             chapter_with_link.insert(title, href);
         }
     } else {
@@ -76,4 +78,27 @@ async fn main() {
         .items(&items)
         .interact()
         .unwrap();
+    let link = chapter_with_link.get(&items[selected]).unwrap();
+    println!("{}", link);
+    let response = reqwest::get(link).await.unwrap();
+
+    let mut paragraphs = Vec::new();
+    if response.status().is_success() {
+        let body = response.text().await.unwrap();
+        let document = Html::parse_document(&body);
+        let para_sel = Selector::parse("#chr-content > p").unwrap();
+
+        for p in document.select(&para_sel) {
+            let text = p.text().collect::<Vec<_>>().join(" ").trim().to_string();
+
+            if !text.is_empty() {
+                paragraphs.push(text);
+            }
+        }
+    } else {
+        println!("failed");
+    }
+    for p in paragraphs {
+        println!("{}", p);
+    }
 }
