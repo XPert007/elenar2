@@ -1,8 +1,15 @@
-use reqwest::{self, Body};
+use crossterm::{
+    execute,
+    terminal::{Clear, ClearType},
+};
+use dialoguer::FuzzySelect;
+use reqwest;
 use scraper::{self, Html, Selector};
+use std::io::stdout;
 use std::{collections::HashMap, io};
 #[tokio::main]
 async fn main() {
+    execute!(stdout(), Clear(ClearType::All)).unwrap();
     println!("Enter the light novel you'd like to read");
     let mut name = String::new();
     io::stdin()
@@ -33,4 +40,14 @@ async fn main() {
     } else {
         println!("response failed");
     }
+    let items: Vec<String> = name_with_link.keys().map(|x| x.to_string()).collect();
+    let selected = FuzzySelect::new()
+        .with_prompt("Select the one you'd like to read")
+        .items(&items)
+        .interact()
+        .unwrap();
+    println!(
+        "Selected link : {}",
+        name_with_link.get(&items[selected]).unwrap()
+    );
 }
