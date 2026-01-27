@@ -2,9 +2,9 @@ use std::time::{Duration, Instant};
 
 use color_eyre::Result;
 use crossterm::event::{self, KeyCode};
-use ratatui::layout::{Alignment, Constraint, Layout};
-use ratatui::style::{Color, Style, Stylize};
-use ratatui::text::{Line, Masked, Span};
+use ratatui::layout::{Alignment, Constraint, Layout, Margin};
+use ratatui::style::Stylize;
+use ratatui::text::Line;
 use ratatui::widgets::{Block, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState};
 use ratatui::{DefaultTerminal, Frame};
 
@@ -12,6 +12,8 @@ use ratatui::{DefaultTerminal, Frame};
 struct App {
     vertical_scroll: usize,
     vertical_scroll_state: ScrollbarState,
+    horizontal_scroll: usize,
+    horizontal_scroll_state: ScrollbarState,
 }
 
 pub fn main(paragraphs: Vec<String>) -> Result<()> {
@@ -25,7 +27,7 @@ impl App {
         let mut last_tick = Instant::now();
 
         loop {
-            terminal.draw(|frame| self.render(frame, paragraphs.clone()))?;
+            terminal.draw(|frame| self.render(frame, &paragraphs))?;
 
             let timeout = tick_rate.saturating_sub(last_tick.elapsed());
             if !event::poll(timeout)? {
@@ -38,6 +40,8 @@ impl App {
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Char('j') | KeyCode::Down => self.scroll_down(),
                     KeyCode::Char('k') | KeyCode::Up => self.scroll_up(),
+                    KeyCode::Char('h') | KeyCode::Left => self.scroll_left(),
+                    KeyCode::Char('l') | KeyCode::Right => self.scroll_right(),
                     _ => {}
                 }
             }
@@ -52,29 +56,48 @@ impl App {
         self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
     }
 
-    fn render(&mut self, frame: &mut Frame, paragraphs: Vec<String>) {
+    fn scroll_left(&mut self) {
+        self.horizontal_scroll = self.horizontal_scroll.saturating_sub(4);
+    }
+
+    fn scroll_right(&mut self) {
+        self.horizontal_scroll = self.horizontal_scroll.saturating_add(4);
+    }
+
+    fn render(&mut self, frame: &mut Frame, paragraphs: &[String]) {
         let area = frame.area();
 
         let chunks = Layout::vertical([Constraint::Length(1), Constraint::Fill(1)]).split(area);
 
-        let text: Vec<Line> = paragraphs.into_iter().map(Line::from).collect();
+        let text: Vec<Line> = paragraphs
+            .iter()
+            .flat_map(|s| s.lines().map(Line::from))
+            .collect();
+
+        let max_width = text.iter().map(|l| l.width()).max().unwrap_or(0);
 
         self.vertical_scroll_state = self
             .vertical_scroll_state
             .content_length(text.len())
             .position(self.vertical_scroll);
 
+        self.horizontal_scroll_state = self
+            .horizontal_scroll_state
+            .content_length(max_width)
+            .position(self.horizontal_scroll);
+
         let v = self.vertical_scroll.min(u16::MAX as usize) as u16;
+        let h = self.horizontal_scroll.min(u16::MAX as usize) as u16;
 
         let title = Block::new()
             .title_alignment(Alignment::Center)
-            .title("Use j / k or ↑ ↓ to scroll — q to quit".bold());
+            .title("Use h / j / k / l or ◄ ▲ ▼ ► to scroll — q to quit".bold());
         frame.render_widget(title, chunks[0]);
 
-        let paragraph = Paragraph::new(text)
+        let paragraph = Paragraph::new(text.clone())
             .gray()
-            .block(Block::bordered().gray().title("Vertical scrollbar".bold()))
-            .scroll((v, 0));
+            .block(Block::bordered().gray().title("Light Novel".bold()))
+            .scroll((v, h));
 
         frame.render_widget(paragraph, chunks[1]);
         frame.render_stateful_widget(
@@ -83,6 +106,15 @@ impl App {
                 .end_symbol(Some("↓")),
             chunks[1],
             &mut self.vertical_scroll_state,
+        );
+
+        frame.render_stateful_widget(
+            Scrollbar::new(ScrollbarOrientation::HorizontalBottom),
+            chunks[1].inner(Margin {
+                vertical: 0,
+                horizontal: 1,
+            }),
+            &mut self.horizontal_scroll_state,
         );
     }
 }

@@ -53,7 +53,7 @@ async fn main() {
 
     let slug = link.trim_end_matches('/').rsplit('/').next().unwrap();
     let link = format!("https://novelbin.me/ajax/chapter-archive?novelId={slug}");
-    println!("{}", link);
+    println!("Looking for the chapters... ");
     let response = reqwest::get(link).await.unwrap();
     if response.status().is_success() {
         let body = response.text().await.unwrap();
@@ -80,7 +80,7 @@ async fn main() {
         .interact()
         .unwrap();
     let link = chapter_with_link.get(&items[selected]).unwrap();
-    println!("{}", link);
+    println!("Loading chapter... ");
     let response = reqwest::get(link).await.unwrap();
 
     let mut paragraphs = Vec::new();
@@ -99,5 +99,5 @@ async fn main() {
     } else {
         println!("failed");
     }
-    ui::main(paragraphs);
+    let _ = ui::main(paragraphs);
 }
