@@ -47,13 +47,33 @@ async fn main() {
         .interact()
         .unwrap();
 
-    let chapter_with_link: HashMap<String, String> = HashMap::new();
-    let link = name_with_link.get(&items[selected]).unwrap();
+    let mut chapter_with_link: HashMap<String, String> = HashMap::new();
+    let link = name_with_link.get(&items[selected]).unwrap().clone();
+
+    let slug = link.trim_end_matches('/').rsplit('/').next().unwrap();
+    let link = format!("https://novelbin.me/ajax/chapter-archive?novelId={slug}");
+    println!("{}", link);
     let response = reqwest::get(link).await.unwrap();
     if response.status().is_success() {
         let body = response.text().await.unwrap();
-        println!("{}", body);
+        let document = Html::parse_document(&body);
+
+        let chapter_sel = Selector::parse("div.panel-body ul.list-chapter li > a").unwrap();
+
+        for a in document.select(&chapter_sel) {
+            let title = a.value().attr("title").unwrap_or("").to_string();
+
+            let href = a.value().attr("href").unwrap_or("").to_string();
+            chapter_with_link.insert(title, href);
+        }
     } else {
         println!("doesnt work");
     }
+
+    let items: Vec<String> = chapter_with_link.keys().map(|x| x.to_string()).collect();
+    let selected = FuzzySelect::new()
+        .with_prompt("Select the chapter: ")
+        .items(&items)
+        .interact()
+        .unwrap();
 }
