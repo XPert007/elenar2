@@ -23,6 +23,7 @@ async fn main() {
         sub_search.push_str("+");
     }
     let link = format!("https://novelbin.me/search?keyword={sub_search}");
+    println!("Finding the novel...");
     let response = reqwest::get(link).await.unwrap(); //probably errors if no internet
     let mut name_with_link: HashMap<String, String> = HashMap::new();
     if response.status().is_success() {
